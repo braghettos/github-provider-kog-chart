@@ -1,0 +1,9 @@
+{{- if .Values.restdefinitions.repocontent.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-repocontent
+data:
+  repocontent.yaml: |
+{{ tpl (.Files.Get "assets/repocontent.yaml") . | indent 4 }}
+{{ end }}

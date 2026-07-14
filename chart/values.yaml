@@ -129,3 +129,9 @@ restdefinitions:
     enabled: true
   runnergroup:
     enabled: true
+  gitref:
+    enabled: true
+  repocontent:
+    enabled: true
+  pullrequest:
+    enabled: true

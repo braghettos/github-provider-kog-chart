@@ -73,6 +73,9 @@ This chart supports the following resources and operations:
 | TeamRepo     | ✅   | ✅     | ✅     | ✅     |
 | Workflow     | 🚫 Not applicable   | ✅     | 🚫 Not applicable    | 🚫 Not applicable     |
 | RunnerGroup     | ✅   | ✅     | ✅     | ✅     |
+| GitRef       | ✅   | ✅     | 🚫 Not applicable    | ✅     |
+| RepoContent  | 🚫 Not applicable (v1)   | ✅     | 🚫 Not applicable (v1)    | ✅     |
+| PullRequest  | ✅   | ✅     | ✅     | 🚫 Not applicable     |
 
 > [!NOTE]  
 > 🚫 *"Not applicable"* indicates that the operation is not supported by this provider because it probably does not make sense for the resource type.  For example, GitHub Workflow runs are typically not updated or deleted directly; they are triggered and if a new run is needed, a new workflow run is created.
@@ -217,6 +220,85 @@ spec:
   name: runner-test-by-krateo
   org: krateoplatformops-test
   allows_public_repositories: false
+```
+
+#### GitRef
+
+The `GitRef` resource allows you to create (and delete) branch references — the first step of a GitOps publish flow (create branch → commit files → open pull request).
+Note the GitHub API format asymmetry (probe-verified): the create endpoint requires the **fully qualified** reference in the body (`ref: refs/heads/<branch>`), while the get/delete endpoints reject the fully qualified form and want `heads/<branch>` — the `heads/` prefix is therefore embedded in the RestDefinition path templates and the resource carries both `ref` (fully qualified, for create) and `branch` (plain name, for get/delete).
+Creating a `GitRef` for an **already existing** branch adopts it and surfaces its current head commit in `status.object.sha` — usable as a read of a base branch's HEAD sha.
+Please refer to the [GitHub REST API documentation](https://docs.github.com/en/rest/git/refs?apiVersion=2022-11-28) for more information.
+
+An example of a GitRef resource is:
+```yaml
+apiVersion: github.ogen.krateo.io/v1alpha1
+kind: GitRef
+metadata:
+  name: test-gitref
+  namespace: default
+  annotations:
+    krateo.io/connector-verbose: "true"
+spec:
+  configurationRef:
+    name: my-gitref-config
+    namespace: default
+  owner: krateoplatformops-test
+  repo: test-repo
+  branch: builder/page-example
+  ref: refs/heads/builder/page-example
+  sha: aa218f56b14c9653891f9e74264a383fa43fefbd
+```
+
+#### RepoContent
+
+The `RepoContent` resource commits **one file** to a repository via the [contents API](https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28) (one commit per file). The `content` must be Base64-encoded client-side. The blob sha of the committed file is surfaced in `status.content.sha` (from the create response) and is used by the delete verb.
+**v1 is create-only**: updating an existing file requires the current blob `sha` in the PUT body; while the get-then-put is mechanically expressible with `requestFieldMapping`, GitHub's contents GET returns `content` as newline-wrapped Base64 which would never equal the client-encoded spec value, making a get+update pair perpetually re-commit. File updates are out of scope until reads are normalized (see the comments in `chart/templates/rd-repocontent.yaml`).
+
+An example of a RepoContent resource is:
+```yaml
+apiVersion: github.ogen.krateo.io/v1alpha1
+kind: RepoContent
+metadata:
+  name: test-repocontent
+  namespace: default
+  annotations:
+    krateo.io/connector-verbose: "true"
+spec:
+  configurationRef:
+    name: my-repocontent-config
+    namespace: default
+  owner: krateoplatformops-test
+  repo: test-repo
+  path: chart/templates/flex.page-example.yaml
+  branch: builder/page-example
+  message: "feat(builder): page example - flex root"
+  content: YXBpVmVyc2lvbjogd2lkZ2V0cy50ZW1wbGF0ZXMua3JhdGVvLmlvL3YxYmV0YTEKa2luZDogRmxleAo=
+```
+
+#### PullRequest
+
+The `PullRequest` resource opens (and updates) pull requests. The head and base branches are modelled as `head_ref` / `base_ref` and mapped by the controller into the API's `head` / `base` body fields (GitHub returns `head`/`base` as objects on reads, so distinct resource field names avoid a perpetual spec-vs-remote type mismatch). `status` surfaces `number`, `html_url`, `state` and `merged`. Setting `state: closed` in the spec closes the pull request; GitHub pull requests cannot be deleted via the API, so deleting the CR releases it without touching the PR.
+Please refer to the [GitHub REST API documentation](https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28) for more information.
+
+An example of a PullRequest resource is:
+```yaml
+apiVersion: github.ogen.krateo.io/v1alpha1
+kind: PullRequest
+metadata:
+  name: test-pullrequest
+  namespace: default
+  annotations:
+    krateo.io/connector-verbose: "true"
+spec:
+  configurationRef:
+    name: my-pullrequest-config
+    namespace: default
+  owner: krateoplatformops-test
+  repo: test-repo
+  title: "builder: page example"
+  body: "Adds the widget CRs for the example page."
+  head_ref: builder/page-example
+  base_ref: main
 ```
 
 ### Resource examples

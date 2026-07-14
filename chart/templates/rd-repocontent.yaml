@@ -1,0 +1,40 @@
+{{- if .Values.restdefinitions.repocontent.enabled }}
+kind: RestDefinition
+apiVersion: ogen.krateo.io/v1alpha1
+metadata:
+  name: {{ .Release.Name }}-repocontent
+spec:
+  oasPath: configmap://{{ .Release.Namespace }}/{{ .Release.Name }}-repocontent/repocontent.yaml
+  resourceGroup: github.ogen.krateo.io
+  resource:
+    kind: RepoContent
+    # No get/findby verb (deliberate): one RepoContent CR = one committed file, create-once semantics.
+    # Without an observe verb the status fields fall back to string typing - all three below are strings
+    # in the create response, so the status write is type-safe. The blob sha needed by delete is populated
+    # from the CREATE response (file-commit.content.sha).
+    #
+    # v1 is CREATE-ONLY (no update verb): updating an existing file needs the current blob sha in the PUT
+    # body. Mechanically oasgen CAN express the get-then-put (additionalStatusFields sha + update-verb
+    # requestFieldMapping {inBody: sha, inCustomResource: status.content.sha}), BUT the controller's
+    # up-to-date comparison runs the CR spec against the RAW GET response, where GitHub returns `content`
+    # as newline-wrapped base64 - it would never equal the client-encoded spec.content, so a get+update
+    # pair would perpetually re-commit. Until reads are normalized (plugin endpoint or response mapping),
+    # file UPDATES are out of scope - recreate under a new path or edit via PR review instead.
+    additionalStatusFields:
+      - content.sha
+      - content.html_url
+      - commit.sha
+    excludedSpecFields:
+      # The delete-body blob sha is server-derived (status), never user-set.
+      - sha
+    verbsDescription:
+    - action: create
+      method: PUT
+      path: /repos/{owner}/{repo}/contents/{path}
+    - action: delete
+      method: DELETE
+      path: /repos/{owner}/{repo}/contents/{path}
+      requestFieldMapping:
+        - inBody: sha
+          inCustomResource: status.content.sha
+{{ end }}
