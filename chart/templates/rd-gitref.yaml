@@ -1,0 +1,28 @@
+{{- if .Values.restdefinitions.gitref.enabled }}
+kind: RestDefinition
+apiVersion: ogen.krateo.io/v1alpha1
+metadata:
+  name: {{ .Release.Name }}-gitref
+spec:
+  oasPath: configmap://{{ .Release.Namespace }}/{{ .Release.Name }}-gitref/gitref.yaml
+  resourceGroup: github.ogen.krateo.io
+  resource:
+    kind: GitRef
+    additionalStatusFields:
+      # Current head commit of the reference, refreshed by the get verb. Creating a GitRef CR for an
+      # ALREADY existing branch adopts it and surfaces its head sha here (the "read of the base sha").
+      - object.sha
+    verbsDescription:
+    # The create body requires the FULLY QUALIFIED ref (refs/heads/<branch>); the get/delete endpoints
+    # instead 404 on the fully qualified form (probe-verified) and want heads/<branch>, so the `heads/`
+    # ref-type prefix is embedded in the path templates and `branch` is the plain branch name.
+    - action: create
+      method: POST
+      path: /repos/{owner}/{repo}/git/refs
+    - action: get
+      method: GET
+      path: /repos/{owner}/{repo}/git/ref/heads/{branch}
+    - action: delete
+      method: DELETE
+      path: /repos/{owner}/{repo}/git/refs/heads/{branch}
+{{ end }}

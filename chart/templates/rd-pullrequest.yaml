@@ -1,0 +1,48 @@
+{{- if .Values.restdefinitions.pullrequest.enabled }}
+kind: RestDefinition
+apiVersion: ogen.krateo.io/v1alpha1
+metadata:
+  name: {{ .Release.Name }}-pullrequest
+spec:
+  oasPath: configmap://{{ .Release.Namespace }}/{{ .Release.Name }}-pullrequest/pullrequest.yaml
+  resourceGroup: github.ogen.krateo.io
+  resource:
+    kind: PullRequest
+    additionalStatusFields:
+      - number
+      - html_url
+      - state
+      - merged
+    excludedSpecFields:
+      # `head`/`base` are the raw API body fields, filled by the controller from the resource-side
+      # `head_ref`/`base_ref` (GitHub returns head/base as OBJECTS on reads: keeping the string values
+      # under different spec names avoids a perpetual spec-vs-remote type mismatch).
+      - head
+      - base
+      # `pull_number` is server-assigned, sourced from status.number on get/update.
+      - pull_number
+    verbsDescription:
+    - action: create
+      method: POST
+      path: /repos/{owner}/{repo}/pulls
+      requestFieldMapping:
+        - inBody: head
+          inCustomResource: spec.head_ref
+        - inBody: base
+          inCustomResource: spec.base_ref
+    - action: get
+      method: GET
+      path: /repos/{owner}/{repo}/pulls/{pull_number}
+      requestFieldMapping:
+        - inPath: pull_number
+          inCustomResource: status.number
+    # Setting `state: closed` in the spec closes the PR. There is deliberately NO delete verb:
+    # GitHub pull requests cannot be deleted via the API - deleting the CR releases it cleanly
+    # and leaves the PR untouched.
+    - action: update
+      method: PATCH
+      path: /repos/{owner}/{repo}/pulls/{pull_number}
+      requestFieldMapping:
+        - inPath: pull_number
+          inCustomResource: status.number
+{{ end }}

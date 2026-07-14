@@ -1,0 +1,19 @@
+apiVersion: github.ogen.krateo.io/v1alpha1
+kind: RepoContent
+metadata:
+  name: test-repocontent
+  namespace: default
+  annotations:
+    krateo.io/connector-verbose: "true"
+spec:
+  configurationRef:
+    name: my-repocontent-config
+    namespace: default
+  owner: krateoplatformops-test
+  repo: test-repo
+  # File path in the repository (may contain slashes).
+  path: chart/templates/flex.page-example.yaml
+  branch: builder/page-example
+  message: "feat(builder): page example - flex root"
+  # Base64-encoded file content (encode client-side before setting it here).
+  content: YXBpVmVyc2lvbjogd2lkZ2V0cy50ZW1wbGF0ZXMua3JhdGVvLmlvL3YxYmV0YTEKa2luZDogRmxleAo=

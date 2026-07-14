@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  version: 1.1.4
+  title: GitHub v3 REST API
+  description: GitHub's v3 REST API - Repository contents (file create/delete) excerpt.
+  license:
+    name: MIT
+    url: https://spdx.org/licenses/MIT
+  termsOfService: https://docs.github.com/articles/github-terms-of-service
+  contact:
+    name: Support
+    url: https://support.github.com/contact?tags=dotcom-rest-api
+  x-github-plan: api.github.com
+servers:
+- url: https://api.github.com
+externalDocs:
+  description: GitHub v3 REST API
+  url: https://docs.github.com/rest/
+paths:
+  "/repos/{owner}/{repo}/contents/{path}":
+    put:
+      summary: Create file contents
+      description: |-
+        Creates a new file in a repository (one commit per file). The `content` must be provided
+        already Base64-encoded by the client. This excerpt intentionally models CREATE-only:
+        updating an existing file additionally requires the current blob `sha` in the request body
+        (a read-modify-write the v1 kind does not perform - see the RestDefinition notes).
+
+        OAuth app tokens and personal access tokens (classic) need the `repo` scope to use this endpoint.
+      tags:
+      - repos
+      operationId: repos/create-file-contents
+      externalDocs:
+        description: API method documentation
+        url: https://docs.github.com/rest/repos/contents#create-or-update-file-contents
+      parameters:
+      - "$ref": "#/components/parameters/owner"
+      - "$ref": "#/components/parameters/repo"
+      - "$ref": "#/components/parameters/path"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: The commit message.
+                content:
+                  type: string
+                  description: The new file content, using Base64 encoding (encoded client-side
+                    before being set in the resource spec).
+                branch:
+                  type: string
+                  description: The branch name to commit to. Default is the repository's default branch.
+              required:
+              - message
+              - content
+            examples:
+              default:
+                value:
+                  message: 'feat(builder): page example - flex root'
+                  content: YXBpVmVyc2lvbjogd2lkZ2V0cy50ZW1wbGF0ZXMua3JhdGVvLmlvL3YxYmV0YTE=
+                  branch: builder/page-example
+      responses:
+        '201':
+          description: Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/file-commit"
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/file-commit"
+      x-github:
+        githubCloudOnly: false
+        enabledForGitHubApps: true
+        category: repos
+        subcategory: contents
+    delete:
+      summary: Delete a file
+      description: |-
+        Deletes a file in a repository (one commit). Requires the current blob `sha` of the file,
+        which the controller sources from the resource status (populated by the create response).
+
+        OAuth app tokens and personal access tokens (classic) need the `repo` scope to use this endpoint.
+      tags:
+      - repos
+      operationId: repos/delete-file
+      externalDocs:
+        description: API method documentation
+        url: https://docs.github.com/rest/repos/contents#delete-a-file
+      parameters:
+      - "$ref": "#/components/parameters/owner"
+      - "$ref": "#/components/parameters/repo"
+      - "$ref": "#/components/parameters/path"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: The commit message.
+                sha:
+                  type: string
+                  description: The blob SHA of the file being deleted.
+                branch:
+                  type: string
+                  description: The branch name. Default is the repository's default branch.
+              required:
+              - message
+              - sha
+      responses:
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/file-commit"
+      x-github:
+        githubCloudOnly: false
+        enabledForGitHubApps: true
+        category: repos
+        subcategory: contents
+components:
+  securitySchemes:
+    accessToken:
+      type: http
+      scheme: bearer
+  parameters:
+    owner:
+      name: owner
+      description: The account owner of the repository. The name is not case sensitive.
+      in: path
+      required: true
+      schema:
+        type: string
+    repo:
+      name: repo
+      description: The name of the repository without the `.git` extension. The name
+        is not case sensitive.
+      in: path
+      required: true
+      schema:
+        type: string
+    path:
+      name: path
+      description: The file path in the repository (may contain slashes, e.g.
+        `chart/templates/flex.page-example.yaml`).
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    file-commit:
+      title: File Commit
+      description: File commit (response of the contents create/delete endpoints)
+      type: object
+      properties:
+        content:
+          type: object
+          properties:
+            name:
+              type: string
+            path:
+              type: string
+            sha:
+              type: string
+              description: The blob SHA of the committed file (required for later update/delete).
+            html_url:
+              type: string
+        commit:
+          type: object
+          properties:
+            sha:
+              type: string
+              description: The SHA of the commit that created the file.
+            html_url:
+              type: string

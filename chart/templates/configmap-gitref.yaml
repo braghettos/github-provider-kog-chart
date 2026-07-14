@@ -1,0 +1,9 @@
+{{- if .Values.restdefinitions.gitref.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-gitref
+data:
+  gitref.yaml: |
+{{ tpl (.Files.Get "assets/gitref.yaml") . | indent 4 }}
+{{ end }}

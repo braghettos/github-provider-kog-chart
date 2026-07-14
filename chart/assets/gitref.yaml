@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  version: 1.1.4
+  title: GitHub v3 REST API
+  description: GitHub's v3 REST API - Git references (branch refs) excerpt.
+  license:
+    name: MIT
+    url: https://spdx.org/licenses/MIT
+  termsOfService: https://docs.github.com/articles/github-terms-of-service
+  contact:
+    name: Support
+    url: https://support.github.com/contact?tags=dotcom-rest-api
+  x-github-plan: api.github.com
+servers:
+- url: https://api.github.com
+externalDocs:
+  description: GitHub v3 REST API
+  url: https://docs.github.com/rest/
+paths:
+  "/repos/{owner}/{repo}/git/refs":
+    post:
+      summary: Create a reference
+      description: |-
+        Creates a reference for your repository. You are unable to create new references for empty repositories,
+        even if the commit SHA-1 hash used exists. Empty repositories are repositories without branches.
+        The `ref` in the request body must be the fully qualified reference (i.e., `refs/heads/main`).
+
+        OAuth app tokens and personal access tokens (classic) need the `repo` scope to use this endpoint.
+      tags:
+      - git
+      operationId: git/create-ref
+      externalDocs:
+        description: API method documentation
+        url: https://docs.github.com/rest/git/refs#create-a-reference
+      parameters:
+      - "$ref": "#/components/parameters/owner"
+      - "$ref": "#/components/parameters/repo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ref:
+                  type: string
+                  description: The name of the fully qualified reference (i.e., `refs/heads/main`).
+                    If it doesn't start with 'refs' and has at least two slashes, it will be rejected.
+                sha:
+                  type: string
+                  description: The SHA1 value for this reference (the commit the new branch will point at).
+              required:
+              - ref
+              - sha
+            examples:
+              default:
+                value:
+                  ref: refs/heads/builder/page-example
+                  sha: aa218f56b14c9653891f9e74264a383fa43fefbd
+      responses:
+        '201':
+          description: Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/git-ref"
+      x-github:
+        githubCloudOnly: false
+        enabledForGitHubApps: true
+        category: git
+        subcategory: refs
+  "/repos/{owner}/{repo}/git/ref/heads/{branch}":
+    get:
+      summary: Get a branch reference
+      description: |-
+        Returns a single branch reference. The `heads/` ref-type prefix is embedded in the path, so `branch`
+        is the plain branch name (it may itself contain slashes, e.g. `builder/page-example`).
+      tags:
+      - git
+      operationId: git/get-ref
+      externalDocs:
+        description: API method documentation
+        url: https://docs.github.com/rest/git/refs#get-a-reference
+      parameters:
+      - "$ref": "#/components/parameters/owner"
+      - "$ref": "#/components/parameters/repo"
+      - "$ref": "#/components/parameters/branch"
+      responses:
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/git-ref"
+      x-github:
+        githubCloudOnly: false
+        enabledForGitHubApps: true
+        category: git
+        subcategory: refs
+  "/repos/{owner}/{repo}/git/refs/heads/{branch}":
+    delete:
+      summary: Delete a branch reference
+      description: |-
+        Deletes the branch reference. The `heads/` ref-type prefix is embedded in the path, so `branch`
+        is the plain branch name.
+      tags:
+      - git
+      operationId: git/delete-ref
+      externalDocs:
+        description: API method documentation
+        url: https://docs.github.com/rest/git/refs#delete-a-reference
+      parameters:
+      - "$ref": "#/components/parameters/owner"
+      - "$ref": "#/components/parameters/repo"
+      - "$ref": "#/components/parameters/branch"
+      responses:
+        '204':
+          description: Response
+      x-github:
+        githubCloudOnly: false
+        enabledForGitHubApps: true
+        category: git
+        subcategory: refs
+components:
+  securitySchemes:
+    accessToken:
+      type: http
+      scheme: bearer
+  parameters:
+    owner:
+      name: owner
+      description: The account owner of the repository. The name is not case sensitive.
+      in: path
+      required: true
+      schema:
+        type: string
+    repo:
+      name: repo
+      description: The name of the repository without the `.git` extension. The name
+        is not case sensitive.
+      in: path
+      required: true
+      schema:
+        type: string
+    branch:
+      name: branch
+      description: The plain branch name (without the `refs/heads/` prefix). May contain
+        slashes (e.g. `builder/page-example`).
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    git-ref:
+      title: Git Reference
+      description: Git references within a repository
+      type: object
+      properties:
+        ref:
+          type: string
+          example: refs/heads/builder/page-example
+        node_id:
+          type: string
+        url:
+          type: string
+          format: uri
+        object:
+          type: object
+          properties:
+            type:
+              type: string
+            sha:
+              type: string
+              description: SHA for the reference
+              example: 7638417db6d59f3c431d3e1f261cc637155684cd
+              minLength: 40
+              maxLength: 40
+            url:
+              type: string
+              format: uri
+      required:
+      - ref
+      - node_id
+      - url
+      - object

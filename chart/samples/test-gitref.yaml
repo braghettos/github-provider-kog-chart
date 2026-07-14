@@ -1,0 +1,19 @@
+apiVersion: github.ogen.krateo.io/v1alpha1
+kind: GitRef
+metadata:
+  name: test-gitref
+  namespace: default
+  annotations:
+    krateo.io/connector-verbose: "true"
+spec:
+  configurationRef:
+    name: my-gitref-config
+    namespace: default
+  owner: krateoplatformops-test
+  repo: test-repo
+  # Plain branch name (used by the get/delete endpoints; may contain slashes).
+  branch: builder/page-example
+  # Fully qualified reference (required by the GitHub create endpoint).
+  ref: refs/heads/builder/page-example
+  # The commit the new branch will point at (e.g. the base branch HEAD).
+  sha: aa218f56b14c9653891f9e74264a383fa43fefbd
